@@ -32,24 +32,42 @@ module.exports = {
 
     getPosts: async (req, res) => {
         try {
-            const userId = req.payload.aud; // aud is the same as id in this case
-
-            const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 5; // Adjust the limit as needed
-
-            const options = {
+          const userId = req.payload.aud; // aud is the same as id in this case
+      
+          // Check if the requested data is in the cache
+          const cacheKey = req.url;
+          client.get(cacheKey, async (err, cachedData) => {
+            if (err) {
+              console.error('Redis error:', err);
+            }
+      
+            if (cachedData !== null) {
+              // If data is found in the cache, send it as the response
+              res.status(200).json(JSON.parse(cachedData));
+            } else {
+              // If data is not found in the cache, fetch and cache it
+              const page = parseInt(req.query.page) || 1;
+              const limit = parseInt(req.query.limit) || 5; // Adjust the limit as needed
+      
+              const options = {
                 page,
                 limit,
-            };
-    
-            const userPosts = await Post.paginate({ user: userId }, options);
-    
-            res.status(200).json(userPosts);
+              };
+      
+              const userPosts = await Post.paginate({ user: userId }, options);
+      
+              // Cache the fetched data with a one-minute expiration time
+              client.SETEX(cacheKey, 60, JSON.stringify(userPosts));
+      
+              // Send the response
+              res.status(200).json(userPosts);
+            }
+          });
         } catch (error) {
-            console.error('Error fetching user posts:', error);
-            res.status(500).json({ message: 'Internal server error' });
+          console.error('Error fetching user posts:', error);
+          res.status(500).json({ message: 'Internal server error' });
         }
-    },
+      },
     getPostById: async (req, res) => {
         try {
             const postId = req.params.postId;
