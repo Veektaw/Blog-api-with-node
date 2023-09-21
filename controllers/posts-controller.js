@@ -32,14 +32,11 @@ module.exports = {
 
     getPosts: async (req, res) => {
         try {
-            // Extract the authenticated user's ID from the token payload
-            const userId = req.payload.aud;
-    
-            // Extract query parameters for pagination (page and limit)
+            const userId = req.payload.aud; // aud is the same as id in this case
+
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 10; // Adjust the limit as needed
-    
-            // Query the database for posts by the user and paginate the results
+            const limit = parseInt(req.query.limit) || 5; // Adjust the limit as needed
+
             const options = {
                 page,
                 limit,
@@ -56,8 +53,6 @@ module.exports = {
     getPostById: async (req, res) => {
         try {
             const postId = req.params.postId;
-    
-            // Query the database to find the post by its ID
             const post = await Post.findById(postId);
     
             if (!post) {
@@ -65,8 +60,80 @@ module.exports = {
             }
     
             res.status(200).json(post);
+
         } catch (error) {
             console.error('Error fetching post by ID:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    },
+    updatePost: async (req, res) => {
+        try {
+            const postId = req.params.postId;
+            const post = await Post.findById(postId);
+    
+            if (!post) {
+                return res.status(404).json({ message: 'Post not found' });
+            }
+    
+            if (post.user.toString() !== req.payload.id) {
+                return res.status(403).json({ message: 'Permission denied' });
+            }
+
+            post.title = req.body.title || post.title;
+            post.content = req.body.content || post.content;
+
+            await post.save();
+    
+            res.status(200).json(post);
+
+        } catch (error) {
+            console.error('Error updating post:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    },
+    deletePost: async (req, res) => {
+        try {
+            const postId = req.params.postId;
+    
+            const post = await Post.findById(postId);
+    
+            if (!post) {
+                return res.status(404).json({ message: 'Post not found' });
+            }
+    
+            if (post.user.toString() !== req.payload.aud) {
+                return res.status(403).json({ message: 'Permission denied' });
+            }
+    
+            await post.deleteOne();
+    
+            res.status(200).json({ message: 'Post deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    },
+    search: async (req, res) => {
+        try {
+            const { title, content } = req.body;
+            
+            if (!title && !content) {
+                return res.status(400).json({ message: 'Search query is required' });
+            }
+
+            const searchQuery = {};
+            if (title) {
+                searchQuery.title = { $regex: title, $options: 'i' };
+            }
+            if (content) {
+                searchQuery.content = { $regex: content, $options: 'i' };
+            }
+
+            const searchResults = await Post.find(searchQuery);
+    
+            res.status(200).json({ results: searchResults });
+        } catch (error) {
+            console.error('Error performing search:', error);
             res.status(500).json({ message: 'Internal server error' });
         }
     }

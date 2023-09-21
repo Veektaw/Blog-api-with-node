@@ -8,8 +8,12 @@ router.post('/post', verifyAccessToken, postsControl.makePosts);
 
 router.get('/posts', verifyAccessToken, postsControl.getPosts)
 
-router.post('/:postId', verifyAccessToken, postsControl.getPostById)
+router.get('/:postId', verifyAccessToken, postsControl.getPostById)
 
-// router.delete('/logout', authControl.login)
+router.put('/:postId', verifyAccessToken, postsControl.updatePost)
+
+router.delete('/:postId', verifyAccessToken, postsControl.deletePost)
+
+router.post('/search', verifyAccessToken, postsControl.search)
 
 module.exports = router;
