@@ -12,12 +12,17 @@ const Postschema = new Schema ({
         type: String,
         required: true
     },
+    createAt: {
+        type: Date,
+        default: () => Date.now(),
+    },
     // Reference to the user who created the post
     user: {
         type: Schema.Types.ObjectId,
         ref: 'user',
         required: true
-    }
+    },
+    
 });
 
 Postschema.plugin(mongoosePaginate); 
